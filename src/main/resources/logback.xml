@@ -1,0 +1,24 @@
+<configuration>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date %-5level %logger{0} {%class %method} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="file" class="ch.qos.logback.core.FileAppender">
+        <file>${log-file:-logs/application.log}</file>
+        <param name="append" value="true"/>
+        <encoder>
+            <pattern>%date %-5level %logger{0} {%class %method} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="org.nd4j" level="ERROR"/>
+
+    <root level="info">
+        <appender-ref ref="console"/>
+        <appender-ref ref="file"/>
+    </root>
+
+</configuration>
