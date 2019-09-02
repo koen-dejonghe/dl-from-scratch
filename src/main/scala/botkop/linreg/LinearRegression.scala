@@ -24,6 +24,7 @@ object LinearRegression extends App {
 
   def dataIter(batchSize: Int, features: Tensor, labels: Tensor): Iterator[(Variable, Variable)] = {
     val numExamples = features.shape(0)
+    // examples are read at random, in no particular order
     val indices = Random.shuffle((0 until numExamples).toList)
 
     def extract(t: Tensor, indices: Seq[Int]): Variable = Variable(ns.concatenate(indices.map(i => t(i))))
@@ -53,20 +54,29 @@ object LinearRegression extends App {
       p.grad.data := 0.0
     }
 
-  val lr = 0.03
-  val numEpochs = 10
-  val net: (Variable, Variable, Variable) => Variable = linReg
-  val loss: (Variable, Variable) => Variable = squaredLoss
+  val lr = 0.03 // learning rate (step size)
+  val numEpochs = 15 // number of iterations
+  val net: (Variable, Variable, Variable) => Variable = linReg // our fancy linear model
+  val loss: (Variable, Variable) => Variable = squaredLoss // 0.5 (y-y')^2
 
   (0 until numEpochs).foreach { epoch =>
+    /*
+      Assuming the number of examples can be divided by the batch size, all
+      the examples in the training data set are used once in one epoch
+      iteration. The features and tags of mini-batch examples are given by x
+      and y respectively
+    */
     dataIter(batchSize, features, labels).foreach { case (x, y) =>
-        val l = loss(net(x, w, b), y).mean()
-        l.backward()
-        sgd(Seq(w, b), lr, batchSize)
+        val l = loss(net(x, w, b), y).mean() // minibatch loss in x and y
+        l.backward() // compute gradient on l with respect to [w,b]
+        sgd(Seq(w, b), lr, batchSize) // update parameters using their gradient
     }
     val l = loss(net(Variable(features), w, b), Variable(labels))
     print(s"epoch: $epoch, loss ${l.mean()}\n")
   }
+
+  println(s"error estimating w: ${trueW - w.data}")
+  println(s"error estimating b: ${trueB - b.data}")
 
 
 
