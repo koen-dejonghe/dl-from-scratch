@@ -1,5 +1,7 @@
 <configuration>
 
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%date %-5level %logger{0} {%class %method} - %msg%n</pattern>
@@ -15,6 +17,7 @@
     </appender>
 
     <logger name="org.nd4j" level="ERROR"/>
+    <logger name="org.reflections" level="ERROR" />
 
     <root level="info">
         <appender-ref ref="console"/>
