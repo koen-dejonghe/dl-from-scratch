@@ -15,19 +15,19 @@ object LinearRegression extends App {
   val trueB = Tensor(4.2)
 
   val features = ns.randn(numExamples, numFeatures)
-  println(features.shape.toList)
 
   val labels = (features dot trueW) + trueB
-  val sigma = ns.randn(labels.shape) * 0.01
-  labels += sigma
-  println(labels.shape.toList)
+  // noise term epsilon to account for measurement errors
+  val epsilon = ns.randn(labels.shape) * 0.01
+  labels += epsilon
 
   def dataIter(batchSize: Int, features: Tensor, labels: Tensor): Iterator[(Variable, Variable)] = {
     val numExamples = features.shape(0)
     // examples are read at random, in no particular order
     val indices = Random.shuffle((0 until numExamples).toList)
 
-    def extract(t: Tensor, indices: Seq[Int]): Variable = Variable(ns.concatenate(indices.map(i => t(i))))
+    def extract(t: Tensor, indices: Seq[Int]): Variable =
+      Variable(ns.concatenate(indices.map(i => t(i))))
 
     indices.sliding(batchSize, batchSize).map { l =>
       (extract(features, l), extract(labels.T, l))
@@ -77,7 +77,5 @@ object LinearRegression extends App {
 
   println(s"error estimating w: ${trueW - w.data}")
   println(s"error estimating b: ${trueB - b.data}")
-
-
 
 }
