@@ -1,4 +1,4 @@
-package botkop.linreg
+package botkop.regression
 
 import botkop.{numsca => ns}
 import ns._
