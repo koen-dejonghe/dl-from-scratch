@@ -9,6 +9,7 @@ object AutoGrad extends App {
 }
 
 case class Variable(data: Tensor, f: Option[Function] = None) {
+
   lazy val g: Tensor = ns.zerosLike(data)
 
   def backward(): Unit = {
@@ -27,22 +28,22 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
 
 trait Function {
   def forward(): Variable
-  def backward(gradOutput: Tensor): Unit
+  def backward(g: Tensor): Unit
 }
 
 case class Add(v1: Variable, v2: Variable) extends Function {
   def forward(): Variable = Variable(v1.data + v2.data, f = Some(this))
-  def backward(gradOutput: Tensor): Unit = {
-    v1.backward(gradOutput)
-    v2.backward(gradOutput)
+  def backward(g: Tensor): Unit = {
+    v1.backward(g)
+    v2.backward(g)
   }
 }
 
 case class Mul(v1: Variable, v2: Variable) extends Function {
   override def forward(): Variable = Variable(v1.data * v2.data, f = Some(this))
-  override def backward(gradOutput: Tensor): Unit = {
-    val dv2 = v2.data * gradOutput
-    val dv1 = v1.data * gradOutput
+  override def backward(g: Tensor): Unit = {
+    val dv2 = v2.data * g
+    val dv1 = v1.data * g
     v1.backward(dv2)
     v2.backward(dv1)
   }
