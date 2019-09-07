@@ -6,8 +6,8 @@ import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 
 /**
-Explains naive and analytical derivative calculation for operators with 1 operand
- */
+Explains analytical and naive derivative calculation for operators with 1 operand
+  */
 object AutoGrad1 extends App {
 
   /* when using naive derivative calculation, we must use double precision to avoid rounding errors */
@@ -19,7 +19,6 @@ object AutoGrad1 extends App {
 
   // define our function
   val f: Tensor => Tensor = ns.tanh
-
 
   // execute the function
   val t = x.tanh()
@@ -49,7 +48,7 @@ object AutoGrad1 extends App {
 
 /**
 Explains naive and analytical derivative calculation for operators with 2 operands
- */
+  */
 object AutoGrad2 extends App {
 
   /* when using naive derivative calculation, we must use double precision to avoid rounding errors */
@@ -85,48 +84,32 @@ object AutoGrad2 extends App {
   println(s"nda = $nda,")
   println(s"ndb = $ndb\n")
 
-  // print the relative error
+  // print the differences
   println(s"error in a = ${DerivativeUtil.relativeError(da, nda)}\n")
   println(s"error in b = ${DerivativeUtil.relativeError(db, ndb)}\n")
 }
 
-object ChainRule extends App {
+object ChainRule1 extends App {
+  val x = Variable(-2)
+  val y = Variable(5)
+  val z = Variable(-4)
 
+  val q = x + y // 3
 
-}
+  val f = q * z // -12
 
-/**
- * Wrapper around a tensor.
- * Keeps track of the computation graph by storing the originating function of this variable, if any.
- * @param data the tensor
- * @param f function that produced this variable
- */
-case class Variable(data: Tensor, f: Option[Function] = None) {
+  // print the computation graph
+  println(s"computation graph: $f")
 
-  lazy val g: Tensor = ns.zerosLike(data)
+  // backprop
+  f.backward()
 
-  def backward(gradOutput: Tensor = ns.ones(data.shape)): Unit = {
-    g += gradOutput
-    for (gf <- f) gf.backward(gradOutput)
-  }
-
-  def tanh(): Variable = Tanh(this).forward()
-
-  def +(other: Variable): Variable = Add(this, other).forward()
-  def *(other: Variable): Variable = Mul(this, other).forward()
-  def dot(other: Variable): Variable = Dot(this, other).forward()
-
-  def naive1(f: Tensor => Tensor): Variable =
-    NaiveDerivative1(f, this).forward()
-
-  def naive2(f: (Tensor, Tensor) => Tensor, other: Variable): Variable =
-    NaiveDerivative2(f, this, other).forward()
-
-}
-
-trait Function {
-  def forward(): Variable
-  def backward(g: Tensor): Unit
+  // print gradients
+  println(s"gradient of f = ${f.g}")
+  println(s"gradient of q = ${q.g}")
+  println(s"gradient of x = ${x.g}")
+  println(s"gradient of y = ${y.g}")
+  println(s"gradient of z = ${z.g}")
 }
 
 case class NaiveDerivative1(f: Tensor => Tensor, x: Variable) extends Function {
@@ -156,12 +139,12 @@ case class NaiveDerivative2(f: (Tensor, Tensor) => Tensor,
 object DerivativeUtil {
 
   /**
-   *
-   * @param f function to compute the derivative of
-   * @param x
-   * @param df
-   * @return
-   */
+    * Compute the gradient of f with respect to x
+    * @param f function with 1 operand to compute the derivative of
+    * @param x the example tensor to compute the gradient of
+    * @param df the derivative of earlier computations, to apply the chain rule
+    * @return the gradient of f with respect to x
+    */
   def naive1(f: Tensor => Tensor, x: Tensor, df: Tensor): Tensor = {
 
     /*
@@ -195,61 +178,35 @@ object DerivativeUtil {
     grad
   }
 
+  /**
+    * Computes the gradients of f with respect to a and b
+    * @param f the function to evaluate
+    * @param a first parameter to the function f
+    * @param b second parameter to function f
+    * @param df the derivative of earlier computations, to apply the chain rule
+    * @return the gradients of f with respect to a and b
+    */
   def naive2(f: (Tensor, Tensor) => Tensor,
              a: Tensor,
              b: Tensor,
              df: Tensor): (Tensor, Tensor) = {
 
+    // keep b fixed and evaluate around a
     def fa(t: Tensor): Tensor = f(t, b)
-    def fb(t: Tensor): Tensor = f(a, t)
-
     val da = naive1(fa, a, df)
+
+    // keep a fixed and evaluate around b
+    def fb(t: Tensor): Tensor = f(a, t)
     val db = naive1(fb, b, df)
 
     (da, db)
   }
 
+  /**
+    * Compute the relative difference between 2 tensors
+    */
   def relativeError(x: Tensor, y: Tensor): Double =
     ns.max(ns.abs(x - y) / ns.maximum(ns.abs(x) + ns.abs(y), 1e-8)).squeeze()
 
 }
 
-case class Add(v1: Variable, v2: Variable) extends Function {
-  def forward(): Variable = Variable(v1.data + v2.data, f = Some(this))
-  def backward(g: Tensor): Unit = {
-    v1.backward(g * 1.0)
-    v2.backward(g * 1.0)
-  }
-}
-
-case class Mul(v1: Variable, v2: Variable) extends Function {
-  override def forward(): Variable = Variable(v1.data * v2.data, f = Some(this))
-  override def backward(g: Tensor): Unit = {
-    val dv2 = v2.data * g
-    val dv1 = v1.data * g
-    v1.backward(dv2)
-    v2.backward(dv1)
-  }
-}
-
-case class Dot(v1: Variable, v2: Variable) extends Function {
-  val w: Tensor = v1.data
-  val x: Tensor = v2.data
-
-  override def forward(): Variable = Variable(w dot x, f = Some(this))
-  override def backward(g: Tensor): Unit = {
-    val dw = g dot x.T
-    val dx = w.T dot g
-    v1.backward(dw)
-    v2.backward(dx)
-  }
-}
-
-case class Tanh(x: Variable) extends Function {
-  val tanh: Tensor = ns.tanh(x.data)
-  override def forward(): Variable = Variable(tanh, Some(this))
-  override def backward(g: Tensor): Unit = {
-    val dx = (1 - ns.square(tanh)) * g
-    x.backward(dx)
-  }
-}
