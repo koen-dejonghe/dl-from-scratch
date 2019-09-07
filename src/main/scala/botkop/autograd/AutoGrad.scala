@@ -5,16 +5,21 @@ import botkop.numsca.Tensor
 import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 
-/*
+/**
 Explains naive and analytical derivative calculation for operators with 1 operand
  */
 object AutoGrad1 extends App {
 
-  /* when using naive derivative calculation, we must use double precision to avoid underflow */
+  /* when using naive derivative calculation, we must use double precision to avoid rounding errors */
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
 
+  // initialize operand
   val x = Variable(ns.randn(3, 3))
   println(s"x = $x\n")
+
+  // define our function
+  val f: Tensor => Tensor = ns.tanh
+
 
   // execute the function
   val t = x.tanh()
@@ -25,12 +30,10 @@ object AutoGrad1 extends App {
 
   println(s"dx = $dx\n")
 
-  // reset the gradient in x
+  // reset the gradient in x, because we will reuse x
   x.g := 0
 
   // now calculate the gradient in a naive way
-  // define our function
-  val f: Tensor => Tensor = ns.tanh
   // execute the function
   val nt = x.naive1(f)
   // back prop
@@ -44,29 +47,35 @@ object AutoGrad1 extends App {
   println(s"error = ${DerivativeUtil.relativeError(dx, ndx)}\n")
 }
 
-/*
+/**
 Explains naive and analytical derivative calculation for operators with 2 operands
  */
 object AutoGrad2 extends App {
 
-  /* when using naive derivative calculation, we must use double precision to avoid underflow */
+  /* when using naive derivative calculation, we must use double precision to avoid rounding errors */
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
 
+  // initialize operands
   val a = Variable(ns.randn(3, 3))
   val b = Variable(ns.randn(3, 3))
   println(s"a = $a,\nb = $b\n")
 
+  // execute the function (element-wise multiplication)
   val r = a * b
+  // back prop
   r.backward()
 
+  // save the gradients
   val da = a.g.copy()
   val db = b.g.copy()
   println(s"da = $da,")
   println(s"db = $db\n")
 
+  // reset the gradients, since we will be reusing the operands
   a.g := 0
   b.g := 0
 
+  // the function we want to test
   val f: (Tensor, Tensor) => Tensor = ns.multiply
 
   val nr = a.naive2(f, b)
@@ -86,6 +95,12 @@ object ChainRule extends App {
 
 }
 
+/**
+ * Wrapper around a tensor.
+ * Keeps track of the computation graph by storing the originating function of this variable, if any.
+ * @param data the tensor
+ * @param f function that produced this variable
+ */
 case class Variable(data: Tensor, f: Option[Function] = None) {
 
   lazy val g: Tensor = ns.zerosLike(data)
@@ -140,6 +155,13 @@ case class NaiveDerivative2(f: (Tensor, Tensor) => Tensor,
 
 object DerivativeUtil {
 
+  /**
+   *
+   * @param f function to compute the derivative of
+   * @param x
+   * @param df
+   * @return
+   */
   def naive1(f: Tensor => Tensor, x: Tensor, df: Tensor): Tensor = {
 
     /*
@@ -149,7 +171,7 @@ object DerivativeUtil {
      */
     val h = 1e-5 // tiny amount (lim h -> 0)
 
-    val grad = ns.zeros(x.shape) // initialize is set to 0
+    val grad = ns.zeros(x.shape) // initialize the gradient to 0
 
     // loop through indices of the tensor
     ns.nditer(x).foreach { ix: Array[Int] => // ix will be of size 1 for a vector, 2 for a matrix, n for a tensor
@@ -223,9 +245,11 @@ case class Dot(v1: Variable, v2: Variable) extends Function {
   }
 }
 
-case class Tanh(v: Variable) extends Function {
-  val cache: Tensor = ns.tanh(v.data)
-  override def forward(): Variable = Variable(cache, Some(this))
-  override def backward(g: Tensor): Unit =
-    v.backward((1 - ns.square(cache)) * g)
+case class Tanh(x: Variable) extends Function {
+  val tanh: Tensor = ns.tanh(x.data)
+  override def forward(): Variable = Variable(tanh, Some(this))
+  override def backward(g: Tensor): Unit = {
+    val dx = (1 - ns.square(tanh)) * g
+    x.backward(dx)
+  }
 }
