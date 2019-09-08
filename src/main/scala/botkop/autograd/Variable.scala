@@ -47,18 +47,12 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
     */
   def tanh(): Variable = Tanh(this).forward()
 
-  def naive1(f: Tensor => Tensor): Variable =
-    NaiveDerivative1(f, this).forward()
-
   /**
     * Functions with 2 operands
     */
   def +(other: Variable): Variable = Add(this, other).forward()
   def *(other: Variable): Variable = Mul(this, other).forward()
   def dot(other: Variable): Variable = Dot(this, other).forward()
-
-  def naive2(f: (Tensor, Tensor) => Tensor, other: Variable): Variable =
-    NaiveDerivative2(f, this, other).forward()
 
 }
 
