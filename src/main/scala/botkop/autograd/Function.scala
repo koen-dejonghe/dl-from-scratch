@@ -8,9 +8,17 @@ trait Function {
   def backward(g: Tensor): Unit
 }
 
-/*
+/* ================================
 Functions with 1 operand
  */
+
+case class Mean(v: Variable) extends Function {
+  def forward() = Variable(data = ns.mean(v.data), Some(this))
+  def backward(gradOutput: Tensor): Unit = {
+    val n = v.shape.product
+    v.backward(gradOutput / n)
+  }
+}
 
 case class Tanh(x: Variable) extends Function {
   val tanh: Tensor = ns.tanh(x.data)
@@ -36,7 +44,7 @@ case class Threshold(x: Variable, d: Double) extends Function {
   }
 }
 
-/*
+/* ================================
 Functions with 2 operands
  */
 
@@ -66,6 +74,17 @@ case class Mul(v1: Variable, v2: Variable) extends Function {
   }
 }
 
+case class Div(v1: Variable, v2: Variable) extends Function {
+  override def forward(): Variable = Variable(v1.data / v2.data, Some(this))
+  override def backward(gradOutput: Tensor): Unit = {
+    val rv2 = 1 / v2.data
+    val gv1 = gradOutput * rv2
+    val gv2 = -gradOutput * v1.data * (rv2 ** 2)
+    v1.backward(gv1)
+    v2.backward(gv2)
+  }
+}
+
 case class Dot(v1: Variable, v2: Variable) extends Function {
   val w: Tensor = v1.data
   val x: Tensor = v2.data
@@ -90,7 +109,41 @@ case class Max(x: Variable, y: Variable) extends Function {
   }
 }
 
-case class PowConstant(v: Variable, d: Double) extends Function {
+/* ================================
+Functions with scalars
+ */
+
+case class AddScalar(v: Variable, d: Double) extends Function {
+  override def forward(): Variable = Variable(v.data + d, Some(this))
+  override def backward(gradOutput: Tensor): Unit = {
+    v.backward(gradOutput)
+  }
+}
+
+case class SubScalar(v: Variable, d: Double) extends Function {
+  override def forward(): Variable = Variable(v.data - d, Some(this))
+  override def backward(gradOutput: Tensor): Unit = {
+    v.backward(gradOutput)
+  }
+}
+
+case class MulScalar(v: Variable, d: Double) extends Function {
+  override def forward(): Variable = Variable(v.data * d, Some(this))
+  override def backward(gradOutput: Tensor): Unit = {
+    val dv = gradOutput * d
+    v.backward(dv)
+  }
+}
+
+case class DivScalar(v: Variable, d: Double) extends Function {
+  override def forward(): Variable = Variable(v.data / d, Some(this))
+  override def backward(gradOutput: Tensor): Unit = {
+    val dv = gradOutput / d
+    v.backward(dv)
+  }
+}
+
+case class PowScalar(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(ns.power(v.data, d), Some(this))
   override def backward(gradOutput: Tensor): Unit = {
     val dv = d * ns.power(v.data, d - 1) * gradOutput
@@ -98,7 +151,7 @@ case class PowConstant(v: Variable, d: Double) extends Function {
   }
 }
 
-/*
+/* ================================
 Loss functions
  */
 case class SoftmaxLoss(actual: Variable, target: Variable) extends Function {
@@ -121,4 +174,3 @@ case class SoftmaxLoss(actual: Variable, target: Variable) extends Function {
     actual.backward(dx)
   }
 }
-

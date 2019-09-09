@@ -31,6 +31,10 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
     */
   def backward(gradOutput: Tensor = ns.ones(data.shape)): Unit = {
 
+    // gradients may have been broadcasted
+    // squash the dimensions to fit the original shape
+    val ug = ubc(gradOutput)
+
     // Gradients add up at forks.
     // If the forward expression involves the variables x,y multiple times,
     // then when we perform backpropagation we must be careful to use += instead of =
@@ -39,14 +43,34 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
     // which states that if a variable branches out to different parts of the circuit,
     // then the gradients that flow back to it will add.
     // http://cs231n.github.io/optimization-2/#staged
-    g += gradOutput
+    g += ug
 
-    for (gf <- f) gf.backward(gradOutput)
+    // backprop thru function that generated this variable, if any
+    for (gf <- f) gf.backward(ug)
   }
+
+  /*
+  unbroadcast
+   */
+  def ubc(t: Tensor): Tensor =
+    if (t.shape.sameElements(data.shape))
+      t
+    else
+      data.shape.zip(t.shape).zipWithIndex.foldLeft(t) {
+        case (d: Tensor, ((oi, ni), i)) =>
+          if (oi == ni)
+            d
+          else if (oi == 1)
+            ns.sum(d, axis = i)
+          else
+            throw new Exception(
+              s"unable to reduce broadcasted shape ${t.shape.toList} as ${data.shape.toList}")
+      }
 
   /**
     *  Functions with 1 operand
     */
+  def mean(): Variable = Mean(this).forward()
   def tanh(): Variable = Tanh(this).forward()
   def relu(): Variable = Threshold(this, 0.0).forward()
 
@@ -56,7 +80,14 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
   def +(other: Variable): Variable = Add(this, other).forward()
   def -(other: Variable): Variable = Sub(this, other).forward()
   def *(other: Variable): Variable = Mul(this, other).forward()
+  def /(other: Variable): Variable = Div(this, other).forward()
   def dot(other: Variable): Variable = Dot(this, other).forward()
+
+  def +(d: Double): Variable = AddScalar(this, d).forward()
+  def -(d: Double): Variable = SubScalar(this, d).forward()
+  def *(d: Double): Variable = MulScalar(this, d).forward()
+  def /(d: Double): Variable = DivScalar(this, d).forward()
+  def **(d: Double): Variable = PowScalar(this, d).forward()
 
 }
 

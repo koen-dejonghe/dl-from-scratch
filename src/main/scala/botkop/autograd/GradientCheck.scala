@@ -8,12 +8,12 @@ import org.nd4j.linalg.factory.Nd4j
 // http://cs231n.github.io/neural-networks-3/#gradcheck
 
 /**
-  Explains analytical and numerical derivative calculation for functions with 1 operand
+  Explains analytical and numerical gradient calculation for functions with 1 operand
   */
 object GradientCheck1 extends App {
 
   /*
-    When using naive derivative calculation, we must use double precision to avoid rounding errors
+    When using numerical gradient calculation, we must use double precision to avoid rounding errors
     What Every Computer Scientist Should Know About Floating-Point Arithmetic:
     https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
    */
@@ -28,7 +28,8 @@ object GradientCheck1 extends App {
 
   // execute the function
   val t = x.tanh()
-  // back prop
+
+  // analytical back prop
   t.backward()
   // save the gradient
   val dx = x.g.copy()
@@ -44,7 +45,7 @@ object GradientCheck1 extends App {
   // assert same result in forward pass
   assert(t.data.sameElements(nt.data))
 
-  // back prop
+  // numerical back prop
   nt.backward()
   // save the gradient
   val ndx = x.g.copy()
@@ -56,12 +57,12 @@ object GradientCheck1 extends App {
 }
 
 /**
-  Explains numerical and analytical derivative calculation for functions with 2 operands
+  Explains analytical and numerical gradient calculation for functions with 2 operands
   */
 object GradientCheck2 extends App {
 
   /*
-    When using naive derivative calculation, we must use double precision to avoid rounding errors
+    When using numerical gradient calculation, we must use double precision to avoid rounding errors
     What Every Computer Scientist Should Know About Floating-Point Arithmetic:
     https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
    */
@@ -74,7 +75,7 @@ object GradientCheck2 extends App {
 
   // execute the function (element-wise multiplication)
   val r = a * b
-  // back prop
+  // analytical back prop
   r.backward()
 
   // save the gradients
@@ -94,6 +95,7 @@ object GradientCheck2 extends App {
   // assert same result in forward pass
   assert(r.data.sameElements(nr.data))
 
+  // numerical backprop
   nr.backward()
   val (nda, ndb) = (a.g.copy(), b.g.copy())
 

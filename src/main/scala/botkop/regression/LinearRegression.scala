@@ -1,8 +1,8 @@
 package botkop.regression
 
+import botkop.autograd.Variable
 import botkop.{numsca => ns}
 import ns._
-import scorch.autograd.Variable
 
 import scala.util.Random
 
@@ -50,12 +50,12 @@ object LinearRegression extends App {
 
   def sgd(params: Seq[Variable], lr: Double, batchSize: Int): Unit =
     params.foreach { p =>
-      p.data -= lr * p.grad.data / batchSize
-      p.grad.data := 0.0
+      p.data -= lr * p.g / batchSize
+      p.g := 0.0
     }
 
-  val lr = 0.03 // learning rate (step size)
-  val numEpochs = 15 // number of iterations
+  val lr = 0.01 // learning rate (step size)
+  val numEpochs = 5 // number of iterations
   val net: (Variable, Variable, Variable) => Variable = linReg // our fancy linear model
   val loss: (Variable, Variable) => Variable = squaredLoss // 0.5 (y-y')^2
 
@@ -67,12 +67,12 @@ object LinearRegression extends App {
       and y respectively
     */
     dataIter(batchSize, features, labels).foreach { case (x, y) =>
-        val l = loss(net(x, w, b), y).mean() // minibatch loss in x and y
+        val l = loss(net(x, w, b), y) // minibatch loss in x and y
         l.backward() // compute gradient on l with respect to [w,b]
         sgd(Seq(w, b), lr, batchSize) // update parameters using their gradient
     }
     val l = loss(net(Variable(features), w, b), Variable(labels))
-    print(s"epoch: $epoch, loss ${l.mean()}\n")
+    print(s"epoch: $epoch, loss ${l.mean().data}\n")
   }
 
   println(s"error estimating w: ${trueW - w.data}")

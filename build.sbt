@@ -9,7 +9,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "dl-from-scratch",
     libraryDependencies += scalaTest % Test,
-    libraryDependencies += "be.botkop" %% "scorch" % "0.1.1"
+    libraryDependencies += "be.botkop" %% "numsca" % "0.1.5"
 
   )
 
