@@ -3,7 +3,6 @@ package botkop.autograd
 import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 
-
 trait Function {
   def forward(): Variable
   def backward(g: Tensor): Unit
@@ -30,6 +29,13 @@ case class Exp(v: Variable) extends Function {
   }
 }
 
+case class Threshold(x: Variable, d: Double) extends Function {
+  override def forward(): Variable = Variable(ns.maximum(x.data, d), Some(this))
+  override def backward(gradOutput: Tensor): Unit = {
+    x.backward(gradOutput * (x.data > d))
+  }
+}
+
 /*
 Functions with 2 operands
  */
@@ -39,6 +45,14 @@ case class Add(v1: Variable, v2: Variable) extends Function {
   def backward(g: Tensor): Unit = {
     v1.backward(g * 1.0)
     v2.backward(g * 1.0)
+  }
+}
+
+case class Sub(v1: Variable, v2: Variable) extends Function {
+  def forward(): Variable = Variable(v1.data - v2.data, Some(this))
+  def backward(gradOutput: Tensor): Unit = {
+    v1.backward(gradOutput)
+    v2.backward(-gradOutput)
   }
 }
 
@@ -81,6 +95,30 @@ case class PowConstant(v: Variable, d: Double) extends Function {
   override def backward(gradOutput: Tensor): Unit = {
     val dv = d * ns.power(v.data, d - 1) * gradOutput
     v.backward(dv)
+  }
+}
+
+/*
+Loss functions
+ */
+case class SoftmaxLoss(actual: Variable, target: Variable) extends Function {
+  val x: Tensor = actual.data
+  val y: Tensor = target.data.T
+
+  val shiftedLogits: Tensor = x - ns.max(x, axis = 1)
+  val z: Tensor = ns.sum(ns.exp(shiftedLogits), axis = 1)
+  val logProbs: Tensor = shiftedLogits - ns.log(z)
+  val n: Int = x.shape.head
+  val loss: Double = -ns.sum(logProbs(ns.arange(n), y)) / n
+
+  override def forward(): Variable = Variable(Tensor(loss), Some(this))
+
+  override def backward(gradOutput: Tensor /* not used */ ): Unit = {
+    val dx = ns.exp(logProbs)
+    dx(ns.arange(n), y) -= 1
+    dx /= n
+
+    actual.backward(dx)
   }
 }
 

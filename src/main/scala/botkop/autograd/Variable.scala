@@ -16,6 +16,8 @@ import botkop.numsca.Tensor
   */
 case class Variable(data: Tensor, f: Option[Function] = None) {
 
+  def shape: List[Int] = data.shape.toList
+
   /**
     * the local gradient
     */
@@ -46,11 +48,13 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
     *  Functions with 1 operand
     */
   def tanh(): Variable = Tanh(this).forward()
+  def relu(): Variable = Threshold(this, 0.0).forward()
 
   /**
     * Functions with 2 operands
     */
   def +(other: Variable): Variable = Add(this, other).forward()
+  def -(other: Variable): Variable = Sub(this, other).forward()
   def *(other: Variable): Variable = Mul(this, other).forward()
   def dot(other: Variable): Variable = Dot(this, other).forward()
 

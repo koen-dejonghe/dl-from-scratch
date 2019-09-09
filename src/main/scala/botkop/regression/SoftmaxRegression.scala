@@ -1,38 +1,43 @@
 package botkop.regression
 
+import java.util.Locale
+
+import botkop.autograd.{SoftmaxLoss, Variable}
 import botkop.{numsca => ns}
-import botkop.data.FashionMnistDataLoader
+import botkop.data.{DataLoader, FashionMnistDataLoader}
 import com.typesafe.scalalogging.LazyLogging
-import scorch.autograd.Variable
-import scorch.data.loader.DataLoader
 
 object SoftmaxRegression extends App with LazyLogging {
 
+  Locale.setDefault(Locale.US)
   val batchSize = 256
+  // val take = Some(100)
+  val take = None
 
   logger.info("reading training data set")
-  val trainDl = new FashionMnistDataLoader("train", batchSize)
-  logger.info("training data set read")
+  val trainDl = new FashionMnistDataLoader("train", batchSize, take=take)
 
   logger.info("reading test data set")
-  val testDl = new FashionMnistDataLoader("test", batchSize)
+  val testDl = new FashionMnistDataLoader("test", batchSize, take)
   testDl.normalize(trainDl.meanImage)
-  logger.info("test data set read")
 
   val numFeatures = trainDl.numFeatures
   val numClasses = 10
 
-  val w = Variable(ns.randn(numFeatures, numClasses) * 0.01)
+//  val w = Variable(ns.randn(numFeatures, numClasses))
+  val w = Variable(ns.randn(numFeatures, numClasses) * 0.01) // random initialization
+//  val w = Variable(ns.randn(numFeatures, numClasses) * math.sqrt(1.0 / numClasses)) // Xavier initialization
+//  val w = Variable(ns.randn(numFeatures, numClasses) * math.sqrt(2.0 / numClasses)) // He initialization
   val b = Variable(ns.zeros(numClasses))
 
   def net(x: Variable): Variable = (x dot w) + b
 
-  def loss(yHat: Variable, y: Variable): Variable = scorch.softmaxLoss(yHat, y)
+  def loss(yHat: Variable, y: Variable): Variable = SoftmaxLoss(yHat, y).forward()
 
   def sgd(params: Seq[Variable], lr: Double, batchSize: Int): Unit =
-    params.foreach { p =>
-      p.data -= lr * p.grad.data
-      p.grad.data := 0.0
+    params.foreach { p: Variable =>
+      p.data -= lr * p.g
+      p.g := 0.0
     }
 
   def evaluate(dl: DataLoader, net: Variable => Variable): (Double, Double) = {
@@ -52,7 +57,6 @@ object SoftmaxRegression extends App with LazyLogging {
   val lr = 0.5
 
   (0 until numEpochs) foreach { epoch =>
-    logger.info(s"starting epoch $epoch")
     trainDl.foreach {
       case (x, y) =>
         val yh = net(x)
@@ -60,8 +64,10 @@ object SoftmaxRegression extends App with LazyLogging {
         l.backward()
         sgd(Seq(w, b), lr, batchSize) // update parameters using their gradient
     }
-    val (l, a) = evaluate(testDl, net)
-    logger.info(s"epoch $epoch\tloss: $l\taccuracy: $a")
+    val (ltrn, atrn) = evaluate(trainDl, net)
+    val (ltst, atst) = evaluate(testDl, net)
+
+    logger.info(f"epoch $epoch\tloss: $ltst%1.4f/$ltrn%1.4f\taccuracy: $atst%1.4f/$atrn%1.4f")
   }
 
 }
