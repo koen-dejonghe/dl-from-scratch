@@ -14,7 +14,6 @@ object MLP extends App with LazyLogging {
   val batchSize = 256
 
   // hyper parameters
-  // implicit val initMethod: String = "default"
   implicit val initMethod: String = "He"
   val numEpochs = 100
   val lr = 0.5
