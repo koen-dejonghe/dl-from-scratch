@@ -6,7 +6,6 @@ import botkop.{numsca => ns}
 
 case class Adam(parameters: Seq[Variable],
                 lr: Double,
-                lrDecay: Double,
                 beta1: Double = 0.9,
                 beta2: Double = 0.999,
                 epsilon: Double = 1e-8)
@@ -18,7 +17,6 @@ case class Adam(parameters: Seq[Variable],
   var t = 1
 
   def step(epoch: Int): Unit = {
-    val alr = lr * (1.0 / (1.0 + lrDecay * t)) // learning rate annealing: 1/t decay
 
     parameters.zip(ms).zip(vs).foreach {
       case ((p, m), v) =>
@@ -33,7 +31,7 @@ case class Adam(parameters: Seq[Variable],
         v += (1 - beta2) * ns.square(dx)
         val vt = v / (1 - math.pow(beta2, t))
 
-        x -= alr * mt / (ns.sqrt(vt) + epsilon)
+        x -= lr * mt / (ns.sqrt(vt) + epsilon)
 
         t += 1
     }

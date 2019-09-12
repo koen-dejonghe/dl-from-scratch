@@ -17,8 +17,8 @@ object MLP extends App with LazyLogging {
   // hyper parameters
   implicit val initMethod: String = "He"
 //  val learningRate = 0.5
-  val learningRate = 1e-1
-  val learningRateDecay = 0.01
+  val learningRate = 0.01
+  val learningRateDecay = 1e-3
   val numHidden = 100
 
   val numEpochs = 100
@@ -59,7 +59,7 @@ object MLP extends App with LazyLogging {
     SoftmaxLoss(yHat, y).forward()
 
   val sgd = SGD(parameters, learningRate, learningRateDecay)
-  val adam = Adam(parameters, learningRate, learningRateDecay)
+  val adam = Adam(parameters, learningRate)
 
   val optimizer = adam
 

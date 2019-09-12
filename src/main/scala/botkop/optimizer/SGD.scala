@@ -8,8 +8,8 @@ case class SGD(parameters: Seq[Variable],
                learningRateDecay: Double)
     extends Optimizer(parameters) {
 
-  override def step(t: Int): Unit = {
-    val alr = learningRate * (1.0 / (1.0 + learningRateDecay * t)) // learning rate annealing: 1/t decay
+  override def step(epoch: Int): Unit = {
+    val alr = learningRate * (1.0 / (1.0 + learningRateDecay * epoch)) // learning rate annealing: 1/t decay
     parameters.foreach { p =>
       p.data -= alr * p.g
     }
