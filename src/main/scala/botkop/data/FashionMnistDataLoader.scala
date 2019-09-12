@@ -1,7 +1,5 @@
 package botkop.data
 
-import java.io.{FileOutputStream, ObjectOutputStream}
-
 import botkop.autograd.Variable
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
@@ -15,7 +13,8 @@ class FashionMnistDataLoader(val mode: String,
                              miniBatchSize: Int,
                              take: Option[Int] = None,
                              seed: Long = 231)
-    extends DataLoader with LazyLogging {
+    extends DataLoader
+    with LazyLogging {
 
   Random.setSeed(seed)
 
@@ -52,12 +51,14 @@ class FashionMnistDataLoader(val mode: String,
       val xs = Array.fill[Float](numFeatures * batchSize)(elem = 0)
       val ys = Array.fill[Float](batchSize)(elem = 0)
 
-      lines.zipWithIndex.foreach { case (line, lnr) =>
-        val tokens = line.split(",")
-        ys(lnr) = tokens.head.toFloat
-        tokens.tail.zipWithIndex.foreach { case (sx, i) =>
-          xs(lnr * numFeatures + i) = sx.toFloat / 255.0f
-        }
+      lines.zipWithIndex.foreach {
+        case (line, lnr) =>
+          val tokens = line.split(",")
+          ys(lnr) = tokens.head.toFloat
+          tokens.tail.zipWithIndex.foreach {
+            case (sx, i) =>
+              xs(lnr * numFeatures + i) = sx.toFloat / 255.0f
+          }
       }
 
       val x = Variable(Tensor(xs).reshape(batchSize, numFeatures))
@@ -76,14 +77,15 @@ class FashionMnistDataLoader(val mode: String,
     m
   }
 
-  if (mode == "train") normalize(meanImage)
+  if (mode == "train") zeroCenter(meanImage)
 
-  def normalize(meanImage: Tensor): Unit = {
-    val bc = new Tensor(meanImage.array.broadcast(miniBatchSize, numFeatures))
+  def zeroCenter(meanImage: Tensor): Unit = {
+    val bcm = broadcastTo(meanImage, miniBatchSize, numFeatures)
+
     data.foreach {
       case (x, _) =>
         if (x.data.shape.head == miniBatchSize)
-          x.data -= bc
+          x.data -= bcm
         else
           x.data -= meanImage
     }
@@ -92,28 +94,8 @@ class FashionMnistDataLoader(val mode: String,
   def iterator: Iterator[(Variable, Variable)] =
     Random.shuffle(data.toIterator)
 
-}
-
-object FashionMnistDataLoader extends App {
-
-  def persist(file: String): Unit = {
-    val lines: List[String] = {
-      val src = Source.fromFile(file)
-      val lines = src.getLines().toList
-      src.close()
-      lines.tail
-    }
-    val oos = new ObjectOutputStream(new FileOutputStream(s"$file.yx"))
-    lines.foreach { line =>
-      val tokens = line.split(",")
-      val y = tokens.head.toFloat
-      val xs = tokens.tail.map(_.toFloat / 255.0f)
-      oos.writeObject(YX(y, xs))
-    }
-    oos.close()
-  }
-
-  persist("data/fashionmnist/fashion-mnist_test.csv")
+  def broadcastTo(t: Tensor, shape: Int*): Tensor =
+    new Tensor(t.array.broadcast(shape: _*))
 
 }
 

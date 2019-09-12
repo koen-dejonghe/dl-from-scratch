@@ -19,7 +19,7 @@ object SoftmaxRegression extends App with LazyLogging {
 
   logger.info("reading test data set")
   val testDl = new FashionMnistDataLoader("test", batchSize, take)
-  testDl.normalize(trainDl.meanImage)
+  testDl.zeroCenter(trainDl.meanImage)
 
   val numFeatures = trainDl.numFeatures
   val numClasses = 10
