@@ -27,24 +27,19 @@ abstract class Module(localParameters: Seq[Variable] = Nil) {
     Pytorch way of solving distinction between training and test mode is by using a mutable variable.
     Perhaps there is a better way.
      */
-  var inTrainingMode: Boolean = false
+  var isTraining: Boolean = true
 
   /*
   Sets the module in training mode.
   This has any effect only on modules such as Dropout or BatchNorm.
    */
-  def train(mode: Boolean = true): Unit = {
-    this.inTrainingMode = mode
-    subModules.foreach(_.train(mode))
+  def setTrainingMode(mode: Boolean = true): Unit = {
+    this.isTraining = mode
+    subModules.foreach(_.setTrainingMode(mode))
   }
-
-  /*
-  Sets the module in evaluation mode.
-  This has any effect only on modules such as Dropout or BatchNorm.
-   */
-  def eval(): Unit = train(false)
 
   def forward(x: Variable): Variable
 
   def apply(x: Variable): Variable = forward(x)
 }
+

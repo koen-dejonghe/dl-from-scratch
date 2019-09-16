@@ -8,6 +8,10 @@ trait Function {
   def backward(g: Tensor): Unit
 }
 
+object Function {
+  def relu(x: Variable): Variable = x.relu()
+}
+
 /* ================================
 Functions with 1 operand
  */
@@ -42,6 +46,12 @@ case class Threshold(x: Variable, d: Double) extends Function {
   override def backward(gradOutput: Tensor): Unit = {
     x.backward(gradOutput * (x.data > d))
   }
+}
+
+case class Transpose(v: Variable) extends Function {
+  override def forward(): Variable = Variable(v.data.transpose, Some(this))
+  override def backward(gradOutput: Tensor): Unit =
+    v.backward(gradOutput.transpose)
 }
 
 /* ================================

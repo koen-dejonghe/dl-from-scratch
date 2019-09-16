@@ -1,7 +1,10 @@
 package botkop.autograd
 
+import botkop.module.Module
 import botkop.{numsca => ns}
 import botkop.numsca.Tensor
+
+import scala.language.implicitConversions
 
 /**
   * Wrapper around a tensor.
@@ -73,6 +76,7 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
   def mean(): Variable = Mean(this).forward()
   def tanh(): Variable = Tanh(this).forward()
   def relu(): Variable = Threshold(this, 0.0).forward()
+  def t(): Variable = Transpose(this).forward()
 
   /**
     * Functions with 2 operands
@@ -89,9 +93,13 @@ case class Variable(data: Tensor, f: Option[Function] = None) {
   def /(d: Double): Variable = DivScalar(this, d).forward()
   def **(d: Double): Variable = PowScalar(this, d).forward()
 
+  def ~>(f: Variable => Variable): Variable = f(this)
+
 }
 
 object Variable {
   def apply(ds: Double*): Variable = Variable(Tensor(ds:_*))
+  implicit def moduleApply[T <: Module](m: T): (Variable) => Variable =
+    m.forward
 }
 
