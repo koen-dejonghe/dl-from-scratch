@@ -14,7 +14,7 @@ object NN1 extends App with LazyLogging {
 
   Locale.setDefault(Locale.US)
   val batchSize = 1024
-  val learningRate = 0.03
+  val learningRate = 1e-3
   val learningRateDecay = 1e-3
   val numEpochs = 10000
 
@@ -26,7 +26,7 @@ object NN1 extends App with LazyLogging {
 
   case class Net() extends Module {
     val fc1 = Linear(784, 100)
-    val dro = Dropout()
+    val dro = Dropout(0.8)
     val fc2 = Linear(100, 10)
     override def forward(x: Variable): Variable = x ~> fc1 ~> dro ~> relu ~> fc2
   }
@@ -39,7 +39,7 @@ object NN1 extends App with LazyLogging {
   val sgd = SGD(net.parameters, learningRate, learningRateDecay)
   val adam = Adam(net.parameters, learningRate)
 
-  val optimizer = sgd
+  val optimizer = adam
 
   def evaluate(dl: FashionMnistDataLoader,
                net: Module): (Double, Double) = {
