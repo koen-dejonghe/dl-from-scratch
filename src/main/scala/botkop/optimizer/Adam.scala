@@ -16,7 +16,6 @@ case class Adam(parameters: Seq[Variable],
   val steps: Array[Double] = Array.fill(parameters.length)(0)
 
   def step(epoch: Int): Unit = {
-
     parameters.indices.foreach { i =>
       val p = parameters(i)
       val expAvg = expAvgs(i)
@@ -42,63 +41,6 @@ case class Adam(parameters: Seq[Variable],
       //  p.data.addcdiv_(-step_size, exp_avg, denom)
       x -= stepSize * (expAvg / denom)
     }
-
   }
-
-
-
-  /*
-  val ms: Seq[Tensor] = parameters.map(p => ns.zeros(p.shape: _*))
-  val vs: Seq[Tensor] = parameters.map(p => ns.zeros(p.shape: _*))
-  val ts: Array[Double] = Array.fill(parameters.length)(0)
-
-
-  def step(epoch: Int): Unit = {
-
-    parameters.indices.foreach { i =>
-      val p = parameters(i)
-      val m = ms(i)
-      val v = vs(i)
-
-      ts(i) += 1
-      val t = ts(i)
-
-      val x = p.data
-      val dx = p.g
-
-      m *= beta1
-      m += (1 - beta1) * dx
-      val mt = m / (1 - math.pow(beta1, t))
-
-      v *= beta2
-      v += (1 - beta2) * ns.square(dx)
-      val vt = v / (1 - math.pow(beta2, t))
-
-      x -= lr * mt / (ns.sqrt(vt) + epsilon)
-
-    }
-    */
-
-
-
-//  var t = 1
-//    parameters.zip(ms).zip(vs).foreach {
-//      case ((p, m), v) =>
-//        val x = p.data
-//        val dx = p.g
-//
-//        m *= beta1
-//        m += (1 - beta1) * dx
-//        val mt = m / (1 - math.pow(beta1, t))
-//
-//        v *= beta2
-//        v += (1 - beta2) * ns.square(dx)
-//        val vt = v / (1 - math.pow(beta2, t))
-//
-//        x -= lr * mt / (ns.sqrt(vt) + epsilon)
-//
-//        t += 1
-//    }
-//  }
-
 }
+

@@ -9,3 +9,5 @@ abstract class Optimizer(parameters: Seq[Variable]) {
   def zeroGrad(): Unit = parameters.foreach(p => p.g := 0)
 
 }
+
+
