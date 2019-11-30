@@ -16,7 +16,6 @@ case class Adam(parameters: Seq[Variable],
   val steps: Array[Double] = Array.fill(parameters.length)(0)
 
   def step(epoch: Int): Unit = {
-
     parameters.indices.foreach { i =>
       val p = parameters(i)
       val expAvg = expAvgs(i)
@@ -44,3 +43,4 @@ case class Adam(parameters: Seq[Variable],
     }
   }
 }
+

@@ -1,13 +1,10 @@
 package botkop.nn
 
-import java.util.Locale
-
+import botkop.autograd.Function._
 import botkop.autograd.{SoftmaxLoss, Variable}
 import botkop.data.FashionMnistDataLoader
-import botkop.module.{Dropout, Linear, Module}
+import botkop.module.{BatchNorm, Dropout, Linear, Module}
 import botkop.optimizer.{Adam, SGD}
-import botkop.{numsca => ns}
-import botkop.autograd.Function._
 import com.typesafe.scalalogging.LazyLogging
 
 object NN1 extends App with LazyLogging {
@@ -35,7 +32,18 @@ object NN1 extends App with LazyLogging {
       fc2
   }
 
-  val net = Net()
+  val nn2: Module = new Module() {
+    val fc1 = Linear(784, 250)
+    val bn1 = BatchNorm(250)
+    val fc2 = Linear(250, 100)
+    val bn2 = BatchNorm(100)
+    val fc3 = Linear(100, 10)
+    val drp = Dropout()
+    override def forward(x: Variable): Variable = x ~>
+        fc1 ~> bn1 ~> relu ~> drp ~>
+        fc2 ~> bn2 ~> relu ~> drp ~>
+        fc3
+  }
 
   def loss(yHat: Variable, y: Variable): Variable =
     SoftmaxLoss(yHat, y).forward()
@@ -43,39 +51,7 @@ object NN1 extends App with LazyLogging {
   val sgd = SGD(net.parameters, 0.1, 1e-3)
   val adam = Adam(net.parameters, 1e-3)
 
-  val optimizer = adam
-
-  def evaluate(dl: FashionMnistDataLoader,
-               net: Module): (Double, Double) = {
-    val (l, a) =
-      dl.foldLeft(0.0, 0.0) {
-        case ((lossAcc, accuracyAcc), (x, y)) =>
-          val output = net(x)
-          val guessed = ns.argmax(output.data, axis = 1)
-          val accuracy = ns.sum(guessed == y.data)
-          val cost = loss(output, y).data.squeeze()
-          (lossAcc + cost, accuracyAcc + accuracy)
-      }
-    (l / dl.numBatches, a / dl.numSamples)
-  }
-
-  (0 until numEpochs) foreach { epoch =>
-    val t0 = System.nanoTime()
-    trainDl.foreach { // for each mini batch
-      case (x, y) =>
-        optimizer.zeroGrad()
-        val yh = net(x)
-        val l = loss(yh, y)
-        l.backward()
-        optimizer.step(epoch) // update parameters using their gradient
-    }
-    val t1 = System.nanoTime()
-    val dur = (t1 - t0) / 1000000
-    val (ltrn, atrn) = evaluate(trainDl, net)
-    val (ltst, atst) = evaluate(testDl, net)
-
-    logger.info(
-      f"epoch: $epoch%2d duration: $dur%4dms loss: $ltst%1.4f / $ltrn%1.4f\taccuracy: $atst%1.4f / $atrn%1.4f")
-  }
+//  Learner(trnDl, tstDl, nn1, adam, loss).fit(numEpochs)
+  Learner(trnDl, tstDl, nn2, adam, loss).fit(numEpochs)
 
 }

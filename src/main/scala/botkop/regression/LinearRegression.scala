@@ -35,16 +35,10 @@ object LinearRegression extends App {
   }
 
   val batchSize = 10
-//  dataIter(batchSize, features, labels).foreach { case (f, l) =>
-//    println(f)
-//    println(l)
-//    println
-//  }
-
   val w = Variable(ns.randn(numFeatures, 1) * 0.01)
   val b = Variable(ns.zeros(1))
 
-  def linReg(x: Variable, w: Variable, b: Variable): Variable = (x dot w) + b
+  def linear(x: Variable, w: Variable, b: Variable): Variable = (x dot w) + b
 
   def squaredLoss(yHat: Variable, y: Variable): Variable = (yHat - y) ** 2 / 2
 
@@ -56,7 +50,7 @@ object LinearRegression extends App {
 
   val lr = 0.01 // learning rate (step size)
   val numEpochs = 5 // number of iterations
-  val net: (Variable, Variable, Variable) => Variable = linReg // our fancy linear model
+  val net: (Variable, Variable, Variable) => Variable = linear // our fancy linear model
   val loss: (Variable, Variable) => Variable = squaredLoss // 0.5 (y-y')^2
 
   (0 until numEpochs).foreach { epoch =>
