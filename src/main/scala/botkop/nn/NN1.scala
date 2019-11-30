@@ -13,22 +13,26 @@ import com.typesafe.scalalogging.LazyLogging
 object NN1 extends App with LazyLogging {
 
   Locale.setDefault(Locale.US)
-  val batchSize = 1024
-  val learningRate = 1e-3
-  val learningRateDecay = 1e-3
+  val batchSize = 256
   val numEpochs = 10000
 
+  val take = None
+
   logger.info("reading training data set")
-  val trainDl = new FashionMnistDataLoader("train", batchSize)
+  val trainDl = new FashionMnistDataLoader("train", batchSize, take)
   logger.info("reading test data set")
-  val testDl = new FashionMnistDataLoader("test", batchSize)
+  val testDl = new FashionMnistDataLoader("test", batchSize, take)
   testDl.zeroCenter(trainDl.meanImage)
 
   case class Net() extends Module {
     val fc1 = Linear(784, 100)
     val dro = Dropout(0.8)
     val fc2 = Linear(100, 10)
-    override def forward(x: Variable): Variable = x ~> fc1 ~> dro ~> relu ~> fc2
+    override def forward(x: Variable): Variable = x ~>
+      fc1 ~>
+      dro ~>
+      relu ~>
+      fc2
   }
 
   val net = Net()
@@ -36,8 +40,8 @@ object NN1 extends App with LazyLogging {
   def loss(yHat: Variable, y: Variable): Variable =
     SoftmaxLoss(yHat, y).forward()
 
-  val sgd = SGD(net.parameters, learningRate, learningRateDecay)
-  val adam = Adam(net.parameters, learningRate)
+  val sgd = SGD(net.parameters, 0.1, 1e-3)
+  val adam = Adam(net.parameters, 1e-3)
 
   val optimizer = adam
 
