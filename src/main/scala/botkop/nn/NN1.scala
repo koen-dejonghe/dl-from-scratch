@@ -9,7 +9,8 @@ import com.typesafe.scalalogging.LazyLogging
 
 object NN1 extends App with LazyLogging {
 
-  Locale.setDefault(Locale.US)
+  /*
+
   val batchSize = 256
   val numEpochs = 10000
 
@@ -53,5 +54,7 @@ object NN1 extends App with LazyLogging {
 
 //  Learner(trnDl, tstDl, nn1, adam, loss).fit(numEpochs)
   Learner(trnDl, tstDl, nn2, adam, loss).fit(numEpochs)
+  */
+
 
 }
